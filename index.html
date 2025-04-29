@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Dzielenie wielomianów – Schemat Hornera</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background-color: #0b0b0b;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .section {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    input {
+      background-color: #181818;
+      border: 1px solid #333;
+      color: white;
+      padding: 10px;
+      margin: 5px 5px 5px 0;
+      width: 70px;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    .custom-button {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      border: 1px solid white;
+      border-radius: 9999px;
+      padding: 12px 20px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      margin-top: 20px;
+    }
+
+    .custom-button:hover {
+      background-color: white;
+      color: black;
+    }
+
+    .custom-button svg {
+      margin-left: 8px;
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    table {
+  border-collapse: collapse;
+  margin-top: 30px;
+  width: 100%;
+  font-size: 14px;
+  background-color: #111;
+  color: #f0f0f0;
+}
+
+td {
+  border: 1px solid #333;
+  padding: 12px;
+  text-align: center;
+}
+
+.green { background-color: #1e1e1e; }
+.cyan { background-color: #181818; }
+.gray { background-color: #222; }
+.blue { background-color: #2e3e6e; color: #fff; }
+
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 28px;
+      }
+      input {
+        width: 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="section">
+    <h1>Dzielenie wielomianów – Schemat Hornera</h1>
+
+    <div class="input-group">
+      <label>Stopień wielomianu N = 
+        <input type="number" id="degN" value="4" min="1" onchange="generujPola()">
+      </label>
+    </div>
+
+    <div class="input-group" id="polaWielomianu"></div>
+
+    <div class="input-group">
+      Dziel przez (x + <input id="dzielnik" value="-1">)
+    </div>
+
+    <button class="custom-button" onclick="oblicz()">
+      Oblicz
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </button>
+
+    <div id="schemat"></div>
+    <div id="wynikWielomianu"></div>
+  </div>
+
+  <script>
+    let ostatniWynik = [];
+
+    function generujPola() {
+      const N = parseInt(document.getElementById("degN").value);
+      let html = '(';
+      for (let i = 0; i <= N; i++) {
+        const potega = N - i;
+        html += `<input id="a${i}" placeholder="1/2">`;
+        if (potega > 1) html += ` x<sup>${potega}</sup> + `;
+        else if (potega === 1) html += ` x + `;
+      }
+      html += ')';
+      document.getElementById("polaWielomianu").innerHTML = html;
+      if (ostatniWynik.length === N + 1) {
+        for (let i = 0; i <= N; i++) {
+          document.getElementById("a" + i).value = toFractionString(ostatniWynik[i]);
+        }
+      }
+    }
+
+    function parseFraction(value) {
+      value = value.replace(',', '.');
+      if (!value.trim()) return 0;
+      if (value.includes("/")) {
+        const parts = value.split("/").map(part => parseFloat(part.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] !== 0) {
+          return parts[0] / parts[1];
+        }
+      }
+      const num = parseFloat(value);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function toFractionString(num) {
+      if (!isFinite(num)) return '∞';
+      const negative = num < 0;
+      num = Math.abs(num);
+      const tolerance = 1.0E-6;
+      let h1=1, h2=0, k1=0, k2=1, b = num;
+
+      if (Math.abs(num % 1) < tolerance) {
+        return (negative ? '-' : '') + Math.round(num).toString();
+      }
+
+      do {
+        let a = Math.floor(b);
+        let aux = h1; h1 = a*h1 + h2; h2 = aux;
+        aux = k1; k1 = a*k1 + k2; k2 = aux;
+        b = 1/(b - a);
+      } while (Math.abs(num - h1/k1) > num * tolerance);
+
+      let result = k1 === 1 ? `${h1}` : `${h1}/${k1}`;
+      return negative ? '-' + result : result;
+    }
+
+    function formatWithComma(str) {
+      return str.replace('.', ',');
+    }
+
+    function oblicz() {
+      const N = parseInt(document.getElementById("degN").value);
+      const a = parseFloat(document.getElementById("dzielnik").value.replace(',', '.'));
+      const x = -a;
+
+      let coeffs = [];
+      for (let i = 0; i <= N; i++) {
+        const inputValue = document.getElementById("a" + i).value;
+        coeffs.push(parseFraction(inputValue));
+      }
+
+      let wynik = [], mnozenia = [];
+      wynik[0] = coeffs[0];
+      for (let i = 1; i <= N; i++) {
+        mnozenia[i] = wynik[i - 1] * x;
+        wynik[i] = mnozenia[i] + coeffs[i];
+      }
+
+      ostatniWynik = wynik.slice(0, N);
+
+      let html = '<p>Schemat Hornera:</p><table>';
+      html += '<tr><td class="cyan"></td>';
+      for (let i = 0; i <= N; i++) html += `<td class="green">${formatWithComma(toFractionString(coeffs[i]))}</td>`;
+      html += '</tr><tr><td class="cyan">1</td><td class="gray"></td>';
+      for (let i = 1; i <= N; i++) html += `<td class="gray">${formatWithComma(toFractionString(mnozenia[i]))}</td>`;
+      html += '</tr><tr><td class="cyan"></td>';
+      for (let i = 0; i < N; i++) html += `<td class="gray">${formatWithComma(toFractionString(wynik[i]))}</td>`;
+      html += `<td class="blue">${formatWithComma(toFractionString(wynik[N]))}</td></tr></table>`;
+
+      document.getElementById("schemat").innerHTML = html;
+
+      let wielomian = '';
+      for (let i = 0; i < N; i++) {
+        if (Math.abs(wynik[i]) < 1e-10) continue;
+        const potega = N - 1 - i;
+        let wsp = formatWithComma(toFractionString(wynik[i]));
+        if (wielomian && wynik[i] > 0) wielomian += '+';
+        if (potega === 0) wielomian += `${wsp}`;
+        else if (potega === 1) wielomian += `${wsp}x`;
+        else wielomian += `${wsp}x<sup>${potega}</sup>`;
+      }
+
+      const reszta = wynik[N];
+      let resztaText = Math.abs(reszta) < 1e-10 ? '' : `<br>Reszta: ${formatWithComma(toFractionString(reszta))}`;
+
+      document.getElementById("wynikWielomianu").innerHTML = `
+        <p>Wynik: ${wielomian || '0'}${resztaText}</p>
+        <button class="custom-button" onclick="kontynuujDzielenie()">
+          Kontynuuj dzielenie
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      `;
+    }
+
+    function kontynuujDzielenie() {
+      const nowyStopien = ostatniWynik.length - 1;
+      document.getElementById("degN").value = nowyStopien;
+      generujPola();
+    }
+
+    generujPola();
+  </script>
+
+</body>
+</html>
