@@ -71,25 +71,24 @@
     }
 
     table {
-  border-collapse: collapse;
-  margin-top: 30px;
-  width: 100%;
-  font-size: 14px;
-  background-color: #111;
-  color: #f0f0f0;
-}
+      border-collapse: collapse;
+      margin-top: 30px;
+      width: 100%;
+      font-size: 14px;
+      background-color: #111;
+      color: #f0f0f0;
+    }
 
-td {
-  border: 1px solid #333;
-  padding: 12px;
-  text-align: center;
-}
+    td {
+      border: 1px solid #333;
+      padding: 12px;
+      text-align: center;
+    }
 
-.green { background-color: #1e1e1e; }
-.cyan { background-color: #181818; }
-.gray { background-color: #222; }
-.blue { background-color: #2e3e6e; color: #fff; }
-
+    .green { background-color: #1e1e1e; }
+    .cyan { background-color: #181818; }
+    .gray { background-color: #222; }
+    .blue { background-color: #2e3e6e; color: #fff; }
 
     @media (max-width: 600px) {
       h1 {
@@ -107,7 +106,7 @@ td {
     <h1>SCHEMAT HORNERA</h1>
     <hr style="border: none; height: 1px; background-color: #fff; margin: 40px 0;" />
     <div class="input-group">
-      <label>Stopień wielomianu N = 
+      <label>Stopień wielomianu N =
         <input type="number" id="degN" value="4" min="1" onchange="generujPola()">
       </label>
     </div>
@@ -125,29 +124,27 @@ td {
       </svg>
     </button>
 
-    <div id="schemat"></div>
-    <div id="wynikWielomianu"></div>
+    <div id="schematy-kontener"></div>
   </div>
 
   <script>
-    let ostatniWynik = [];
-
     function generujPola() {
       const N = parseInt(document.getElementById("degN").value);
+      let poprzednie = [];
+      for (let i = 0; i <= N; i++) {
+        const pole = document.getElementById("a" + i);
+        if (pole) poprzednie.push(pole.value);
+      }
+
       let html = '(';
       for (let i = 0; i <= N; i++) {
         const potega = N - i;
-        html += `<input id="a${i}" placeholder="1/2">`;
+        html += `<input id="a${i}" placeholder="1/2" value="${poprzednie[i] || ''}">`;
         if (potega > 1) html += ` x<sup>${potega}</sup> + `;
         else if (potega === 1) html += ` x + `;
       }
       html += ')';
       document.getElementById("polaWielomianu").innerHTML = html;
-      if (ostatniWynik.length === N + 1) {
-        for (let i = 0; i <= N; i++) {
-          document.getElementById("a" + i).value = toFractionString(ostatniWynik[i]);
-        }
-      }
     }
 
     function parseFraction(value) {
@@ -207,8 +204,6 @@ td {
         wynik[i] = mnozenia[i] + coeffs[i];
       }
 
-      ostatniWynik = wynik.slice(0, N);
-
       let html = '<p>Schemat Hornera:</p><table>';
       html += '<tr><td class="cyan"></td>';
       for (let i = 0; i <= N; i++) html += `<td class="green">${formatWithComma(toFractionString(coeffs[i]))}</td>`;
@@ -217,8 +212,6 @@ td {
       html += '</tr><tr><td class="cyan"></td>';
       for (let i = 0; i < N; i++) html += `<td class="gray">${formatWithComma(toFractionString(wynik[i]))}</td>`;
       html += `<td class="blue">${formatWithComma(toFractionString(wynik[N]))}</td></tr></table>`;
-
-      document.getElementById("schemat").innerHTML = html;
 
       let wielomian = '';
       for (let i = 0; i < N; i++) {
@@ -234,21 +227,104 @@ td {
       const reszta = wynik[N];
       let resztaText = Math.abs(reszta) < 1e-10 ? '' : `<br>Reszta: ${formatWithComma(toFractionString(reszta))}`;
 
-      document.getElementById("wynikWielomianu").innerHTML = `
+      const kontener = document.getElementById("schematy-kontener");
+      const wrapper = document.createElement("div");
+      wrapper.className = "schemat-blok";
+      wrapper.innerHTML = `
+        ${html}
         <p>Wynik: ${wielomian || '0'}${resztaText}</p>
-        <button class="custom-button" onclick="kontynuujDzielenie()">
+        <button class="custom-button" onclick="kontynuujDzielenie([${wynik.slice(0, N).map(x => `'${toFractionString(x)}'`).join(',')}])">
           Kontynuuj dzielenie
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </button>
       `;
+      kontener.appendChild(wrapper);
     }
 
-    function kontynuujDzielenie() {
-      const nowyStopien = ostatniWynik.length - 1;
-      document.getElementById("degN").value = nowyStopien;
-      generujPola();
+    function kontynuujDzielenie(prevCoeffs) {
+      const nowyStopien = prevCoeffs.length - 1;
+      const kontener = document.getElementById("schematy-kontener");
+
+      const blok = document.createElement("div");
+      blok.className = "schemat-blok";
+      const id = `blok-${Date.now()}`;
+
+      let html = `<hr style="margin: 40px 0; border: none; border-top: 1px solid #444;" />`;
+      html += `<div class="input-group">Stopień wielomianu N = <input type="number" id="degN-${id}" value="${nowyStopien}" disabled></div>`;
+      html += `<div class="input-group" id="polaWielomianu-${id}">(`;
+
+      for (let i = 0; i <= nowyStopien; i++) {
+        const potega = nowyStopien - i;
+        html += `<input id="a-${id}-${i}" value="${prevCoeffs[i] || ''}" placeholder="1/2">`;
+        if (potega > 1) html += ` x<sup>${potega}</sup> + `;
+        else if (potega === 1) html += ` x + `;
+      }
+
+      html += `)</div>
+        <div class="input-group">Dziel przez (x + <input id="dzielnik-${id}" value="-1">)</div>
+        <button class="custom-button" onclick="obliczBlok('${id}', ${nowyStopien})">
+          Oblicz
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        <div id="schemat-${id}"></div>`;
+
+      blok.innerHTML = html;
+      kontener.appendChild(blok);
+    }
+
+    function obliczBlok(id, N) {
+      const a = parseFloat(document.getElementById(`dzielnik-${id}`).value.replace(',', '.'));
+      const x = -a;
+      let coeffs = [];
+      for (let i = 0; i <= N; i++) {
+        const inputValue = document.getElementById(`a-${id}-${i}`).value;
+        coeffs.push(parseFraction(inputValue));
+      }
+
+      let wynik = [], mnozenia = [];
+      wynik[0] = coeffs[0];
+      for (let i = 1; i <= N; i++) {
+        mnozenia[i] = wynik[i - 1] * x;
+        wynik[i] = mnozenia[i] + coeffs[i];
+      }
+
+      let html = '<p>Schemat Hornera:</p><table>';
+      html += '<tr><td class="cyan"></td>';
+      for (let i = 0; i <= N; i++) html += `<td class="green">${formatWithComma(toFractionString(coeffs[i]))}</td>`;
+      html += '</tr><tr><td class="cyan">1</td><td class="gray"></td>';
+      for (let i = 1; i <= N; i++) html += `<td class="gray">${formatWithComma(toFractionString(mnozenia[i]))}</td>`;
+      html += '</tr><tr><td class="cyan"></td>';
+      for (let i = 0; i < N; i++) html += `<td class="gray">${formatWithComma(toFractionString(wynik[i]))}</td>`;
+      html += `<td class="blue">${formatWithComma(toFractionString(wynik[N]))}</td></tr></table>`;
+
+      let wielomian = '';
+      for (let i = 0; i < N; i++) {
+        if (Math.abs(wynik[i]) < 1e-10) continue;
+        const potega = N - 1 - i;
+        let wsp = formatWithComma(toFractionString(wynik[i]));
+        if (wielomian && wynik[i] > 0) wielomian += '+';
+        if (potega === 0) wielomian += `${wsp}`;
+        else if (potega === 1) wielomian += `${wsp}x`;
+        else wielomian += `${wsp}x<sup>${potega}</sup>`;
+      }
+
+      const reszta = wynik[N];
+      let resztaText = Math.abs(reszta) < 1e-10 ? '' : `<br>Reszta: ${formatWithComma(toFractionString(reszta))}`;
+
+      document.getElementById(`schemat-${id}`).innerHTML = `
+        ${html}
+        <p>Wynik: ${wielomian || '0'}${resztaText}</p>
+        <button class="custom-button" onclick="kontynuujDzielenie([${wynik.slice(0, N).map(x => `'${toFractionString(x)}'`).join(',')}])">
+          Kontynuuj dzielenie
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      `;
     }
 
     generujPola();
